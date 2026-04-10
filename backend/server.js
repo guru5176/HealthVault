@@ -21,7 +21,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 let currentDocumentContext = "";
 
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Health Passport API is running' });
+  res.json({ status: 'ok', message: 'HealthVault API is running' });
 });
 
 app.post('/api/upload', upload.single('document'), async (req, res) => {
@@ -102,7 +102,7 @@ app.post('/api/query', async (req, res) => {
     }
     
     let systemPrompt = `
-      You are the Nexa Health Passport AI Assistant.
+      You are the HealthVault AI Assistant.
       You are a helpful and knowledgeable medical AI. 
       Answer the user's questions based on the uploaded document context if available.
       If the question is a general medical question, answer it helpfully using your internal knowledge.

@@ -1,7 +1,7 @@
 {
-  "name": "backend",
+  "name": "healthvault-backend",
   "version": "1.0.0",
-  "description": "",
+  "description": "HealthVault AI-powered medical document processing backend",
   "main": "index.js",
   "type": "module",
   "scripts": {

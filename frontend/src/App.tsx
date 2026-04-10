@@ -157,7 +157,7 @@ function App() {
       <header className="app-header">
         <div className="header-row">
           <div className="status-dot" />
-          <span className="header-title">Health Passport</span>
+          <span className="header-title">HealthVault</span>
           <span className="privacy-badge">on-device</span>
         </div>
         <div className="model-status">{modelStatus}</div>

@@ -12,6 +12,7 @@ type Message = {
     findings: string;
     doctor: string;
   };
+  drugPrediction?: string;
 };
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [activeView, setActiveView] = useState<'chat' | 'vault'>('chat');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputLocalRef = useRef<HTMLInputElement>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,6 +41,10 @@ function App() {
 
   const handleScanClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const handleScanLocalClick = () => {
+    fileInputLocalRef.current?.click();
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,12 +64,12 @@ function App() {
       image: imageUrl,
     }]);
 
-    // Upload to backend
+    // Upload to local TrOCR model
     const formData = new FormData();
     formData.append('document', file);
 
     try {
-      const res = await fetch('http://localhost:5000/api/upload', {
+      const res = await fetch('http://localhost:5000/api/predict-drug', {
         method: 'POST',
         body: formData,
       });
@@ -73,14 +79,14 @@ function App() {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
           sender: 'ai',
-          text: `Extracted structured data from your ${data.data.recordType}.`,
-          extractedData: data.data,
+          text: `Extracted text using local fine-tuned TrOCR model:`,
+          drugPrediction: data.prediction,
         }]);
       } else {
         setMessages(prev => [...prev, {
           id: (Date.now() + 1).toString(),
           sender: 'ai',
-          text: 'Failed to process document. Please try again.',
+          text: `Failed to process document. Error: ${data.error || 'Unknown'}`,
         }]);
       }
     } catch {
@@ -92,6 +98,57 @@ function App() {
     } finally {
       setIsScanning(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFileSelectLocal = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const imageUrl = URL.createObjectURL(file);
+    setUploadedImages(prev => [...prev, imageUrl]);
+    setIsScanning(true);
+
+    setMessages(prev => [...prev, {
+      id: Date.now().toString(),
+      sender: 'user',
+      text: '',
+      image: imageUrl,
+    }]);
+
+    const formData = new FormData();
+    formData.append('document', file);
+
+    try {
+      const res = await fetch('http://localhost:5000/api/predict-drug', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          sender: 'ai',
+          text: `Extracted handwritten drug name using local TrOCR model:`,
+          drugPrediction: data.prediction,
+        }]);
+      } else {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          sender: 'ai',
+          text: `Failed to predict drug name locally. Error: ${data.error || 'Unknown'}`,
+        }]);
+      }
+    } catch {
+      setMessages(prev => [...prev, {
+        id: (Date.now() + 1).toString(),
+        sender: 'ai',
+        text: 'Network error — is the backend server running?',
+      }]);
+    } finally {
+      setIsScanning(false);
+      if (fileInputLocalRef.current) fileInputLocalRef.current.value = '';
     }
   };
 
@@ -164,23 +221,42 @@ function App() {
       </header>
 
       {/* ===== SCAN HERO CARD ===== */}
-      <div className="scan-hero-card" onClick={handleScanClick}>
-        {isScanning ? (
-          <div className="scan-processing">
-            <div className="spinner" />
-            Extracting data...
-          </div>
-        ) : (
-          <>
-            <svg className="scan-icon" viewBox="0 0 24 24" fill="none">
-              <path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-              <rect x="9" y="7" width="6" height="10" rx="0.5" stroke="#f2f2f2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M11 10h2M11 12.5h2M11 15h1" stroke="#808080" strokeWidth="1" strokeLinecap="round"/>
-            </svg>
-            <span className="scan-title">Scan Document</span>
-            <span className="scan-subtitle">Tap to capture a medical record</span>
-          </>
-        )}
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="scan-hero-card" onClick={handleScanClick} style={{ flex: 1 }}>
+          {isScanning ? (
+            <div className="scan-processing">
+              <div className="spinner" />
+              Extracting...
+            </div>
+          ) : (
+            <>
+              <svg className="scan-icon" viewBox="0 0 24 24" fill="none">
+                <path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <rect x="9" y="7" width="6" height="10" rx="0.5" stroke="#f2f2f2" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M11 10h2M11 12.5h2M11 15h1" stroke="#808080" strokeWidth="1" strokeLinecap="round"/>
+              </svg>
+              <span className="scan-title">Scan Document</span>
+              <span className="scan-subtitle">Gemini AI</span>
+            </>
+          )}
+        </div>
+        <div className="scan-hero-card" onClick={handleScanLocalClick} style={{ flex: 1, borderColor: 'rgba(59, 130, 246, 0.3)' }}>
+          {isScanning ? (
+            <div className="scan-processing">
+              <div className="spinner" />
+              Processing...
+            </div>
+          ) : (
+            <>
+              <svg className="scan-icon" viewBox="0 0 24 24" fill="none">
+                <path d="M4 8V4h4M20 8V4h-4M4 16v4h4M20 16v4h-4" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M8 12h8" stroke="#f2f2f2" strokeWidth="1.5" strokeLinecap="round"/>
+              </svg>
+              <span className="scan-title">Scan Drug Name</span>
+              <span className="scan-subtitle">Local TrOCR</span>
+            </>
+          )}
+        </div>
       </div>
 
       <input
@@ -188,6 +264,13 @@ function App() {
         accept="image/*,application/pdf"
         ref={fileInputRef}
         onChange={handleFileSelect}
+        className="file-input-hidden"
+      />
+      <input
+        type="file"
+        accept="image/*"
+        ref={fileInputLocalRef}
+        onChange={handleFileSelectLocal}
         className="file-input-hidden"
       />
 
@@ -254,6 +337,15 @@ function App() {
                   <div className="extracted-row">
                     <span className="extracted-label">Findings</span>
                     <span className="extracted-value">{msg.extractedData.findings}</span>
+                  </div>
+                </div>
+              )}
+              {msg.drugPrediction && (
+                <div className="extracted-card" style={{ background: 'rgba(59, 130, 246, 0.1)', borderColor: 'rgba(59, 130, 246, 0.2)' }}>
+                  <h4>Local Prediction</h4>
+                  <div className="extracted-row">
+                    <span className="extracted-label">Drug</span>
+                    <span className="extracted-value" style={{ color: '#60a5fa', fontWeight: 'bold' }}>{msg.drugPrediction}</span>
                   </div>
                 </div>
               )}

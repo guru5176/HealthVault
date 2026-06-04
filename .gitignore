@@ -32,3 +32,16 @@ npm-debug.log*
 
 # Gemini / Antigravity
 .gemini/
+
+# ML models and datasets
+data set/
+fine tuned model/
+checkpoints/
+results/
+ml/checkpoints/
+ml/results/
+ml/__pycache__/
+ml/*.pth
+ml/*.onnx
+*.pth
+*.onnx

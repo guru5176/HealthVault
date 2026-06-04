@@ -3,6 +3,10 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import multer from 'multer';
 import { GoogleGenAI } from '@google/genai';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { execFile } from 'child_process';
 
 dotenv.config();
 
@@ -129,6 +133,41 @@ app.post('/api/query', async (req, res) => {
   } catch (error) {
     console.error('Error in /api/query:', error);
     res.status(500).json({ error: 'Failed to process query using Gemini API.' });
+  }
+});
+
+app.post('/api/predict-drug', upload.single('document'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'No image provided' });
+
+    const tempPath = path.join(os.tmpdir(), `upload_${Date.now()}.jpg`);
+    fs.writeFileSync(tempPath, req.file.buffer);
+
+    // Predict using python script
+    const scriptPath = path.resolve('../ml/predict_api.py');
+    execFile('python', [scriptPath, tempPath], (error, stdout, stderr) => {
+      // Clean up temp file
+      try { fs.unlinkSync(tempPath); } catch (e) {}
+
+      if (error) {
+        console.error('Python execution error:', error);
+        console.error('stderr:', stderr);
+        return res.status(500).json({ error: 'Failed to run OCR model locally' });
+      }
+
+      try {
+        const result = JSON.parse(stdout);
+        if (result.error) return res.status(500).json(result);
+        res.json({ prediction: result.prediction });
+      } catch (parseErr) {
+        console.error('Parse error:', parseErr);
+        console.log('Raw output:', stdout);
+        res.status(500).json({ error: 'Invalid response from model' });
+      }
+    });
+  } catch (err) {
+    console.error('Error in /api/predict-drug:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 });
 

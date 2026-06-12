@@ -6,7 +6,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688.svg)](https://fastapi.tiangolo.com/)
 [![Ollama](https://img.shields.io/badge/Ollama-Local%20LLM-white.svg)](https://ollama.com/)
 [![MLflow](https://img.shields.io/badge/MLflow-2.16-0194E2.svg)](https://mlflow.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 
 ---
 

@@ -362,10 +362,7 @@ docker run -p 8000:8000 --env-file .env health-wallet
 
 ## Team
 
-**SECE-24-28** — Sri Eshwar College of Engineering
+**SECE-24-28** — Guru Aravinth S || Dineshkumar S
 
 ---
 
-## License
-
-This project is developed as part of an academic MLOps coursework. See [LICENSE](LICENSE) for details.

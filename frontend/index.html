@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Health Wallet — Privacy-First Medical Records + AI Routing</title>
+    <meta name="description" content="Privacy-first health platform with local AI-powered medical records management and specialist routing.">
+    <meta property="og:title" content="Health Wallet">
+    <meta property="og:description" content="Privacy-first medical records management with on-device AI inference">
+    <link rel="stylesheet" href="/assets/css/styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏥</text></svg>">
+</head>
+<body>
+
+<!-- Mobile nav toggle -->
+<button class="mobile-nav-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+
+<div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="logo">🏥</div>
+            <div>
+                <h1>Health Wallet</h1>
+                <div class="version">v1.0.0 · Pro</div>
+            </div>
+        </div>
+
+        <div class="nav-section">
+            <div class="nav-section-title">Main</div>
+            <a class="nav-item active" data-view="dashboard" onclick="navigate('dashboard')">
+                <span class="icon">📊</span> Dashboard
+            </a>
+            <a class="nav-item" data-view="vault" onclick="navigate('vault')">
+                <span class="icon">🗄️</span> My Records
+                <span class="badge" id="vault-count">0</span>
+            </a>
+            <a class="nav-item" data-view="chat" onclick="navigate('chat')">
+                <span class="icon">💬</span> AI Assistant
+            </a>
+            <a class="nav-item" data-view="care-router" onclick="navigate('care-router')">
+                <span class="icon">🩺</span> Care Router
+            </a>
+        </div>
+
+        <div class="sidebar-status" id="sidebar-status">
+            <div class="status-row">
+                <span class="status-dot yellow" id="ollama-dot"></span>
+                <span>Ollama: <span id="ollama-status">Checking...</span></span>
+            </div>
+            <div class="status-row">
+                <span class="status-dot yellow" id="mongo-dot"></span>
+                <span>MongoDB: <span id="mongo-status">Checking...</span></span>
+            </div>
+            <div class="status-row">
+                <span class="status-dot green"></span>
+                <span>GPU: Active</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- DASHBOARD VIEW -->
+        <div class="view active" id="view-dashboard">
+            <div class="page-header">
+                <h2>📊 Dashboard</h2>
+                <p>Your health at a glance — privacy-first medical records with on-device AI</p>
+            </div>
+
+            <div class="stats-grid" id="dashboard-stats">
+                <div class="stat-card">
+                    <div class="stat-icon teal">📋</div>
+                    <div class="stat-value" id="stat-records">0</div>
+                    <div class="stat-label">Health Records</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon blue">💊</div>
+                    <div class="stat-value" id="stat-prescriptions">0</div>
+                    <div class="stat-label">Prescriptions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">💬</div>
+                    <div class="stat-value" id="stat-consultations">0</div>
+                    <div class="stat-label">AI Consultations</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon pink">🩺</div>
+                    <div class="stat-value" id="stat-routing">0</div>
+                    <div class="stat-label">Specialist Referrals</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">Quick Actions</div>
+                </div>
+                <div style="display:flex;gap:12px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" onclick="navigate('chat')">💬 Ask AI Assistant</button>
+                    <button class="btn btn-primary" onclick="navigate('care-router')">🩺 Route to Specialist</button>
+                    <button class="btn btn-secondary" onclick="navigate('vault')">🗄️ Browse Records</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RECORDS VIEW (formerly Vault) -->
+        <div class="view" id="view-vault">
+            <div class="page-header">
+                <h2>🗄️ My Records</h2>
+                <p>Your medical records — stored securely, always accessible</p>
+            </div>
+
+            <!-- Prescription Scanner Upload Box -->
+            <div class="card prescription-scanner-card" style="margin-bottom: 20px;">
+                <div class="card-header" style="padding-bottom: 10px;">
+                    <div>
+                        <div class="card-title">📝 Prescription Scanner</div>
+                        <div class="card-subtitle">Upload or drag and drop a handwritten prescription to automatically transcribe and index it.</div>
+                    </div>
+                </div>
+                <div class="scanner-dropzone" id="scanner-dropzone">
+                    <div class="dropzone-content" id="dropzone-content">
+                        <div class="dropzone-icon">📷</div>
+                        <p class="dropzone-text">Drag & drop your prescription image here or <span class="browse-link" style="color: var(--accent-primary); cursor: pointer; text-decoration: underline; font-weight: 600;">browse</span></p>
+                        <p class="dropzone-note">Supports PNG, JPG, JPEG, WEBP · Processed 100% offline</p>
+                        <input type="file" id="scanner-file-input" accept="image/*" style="display: none;">
+                    </div>
+                    <!-- Processing State (hidden by default) -->
+                    <div class="scanner-processing hidden" id="scanner-processing" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+                        <div class="spinner" style="width: 40px; height: 40px; border-width: 4px; margin-bottom: 12px;"></div>
+                        <p class="processing-status" id="processing-status" style="font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">Reading prescription text...</p>
+                        <p style="font-size: 12px; color: var(--text-muted);">This may take a few seconds.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="vault-search" placeholder="Search records (e.g., 'prescription', 'medications')..." oninput="searchVault(this.value)">
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="filterVault('all', this)">All</button>
+                <button class="tab" onclick="filterVault('medications', this)">💊 Medications</button>
+                <button class="tab" onclick="filterVault('timeline', this)">📅 Timeline</button>
+                <button class="tab" onclick="filterVault('general', this)">📄 General</button>
+            </div>
+
+            <div class="records-grid" id="records-grid"></div>
+
+            <!-- Record detail modal -->
+            <div class="modal-overlay hidden" id="record-modal" onclick="if(event.target===this)closeModal()">
+                <div class="modal-content" style="position:relative;">
+                    <button class="modal-close" onclick="closeModal()">✕</button>
+                    <div id="record-detail" class="markdown-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CHAT VIEW -->
+        <div class="view" id="view-chat">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+                <div>
+                    <h2>💬 AI Health Assistant</h2>
+                    <p>Ask questions about your health records — powered by local AI</p>
+                </div>
+                <div class="model-selector" style="display:flex;align-items:center;gap:8px;">
+                    <label for="model-select" style="font-size:13px;color:var(--text-secondary);font-weight:600;white-space:nowrap;">🤖 Model:</label>
+                    <select id="model-select" onchange="switchModel(this.value)" style="padding:8px 12px;border-radius:10px;border:1px solid var(--border);background:var(--bg-input);color:var(--text-primary);font-size:13px;font-weight:600;cursor:pointer;min-width:160px;">
+                        <option value="deepseek-r1:7b">DeepSeek R1 7B</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="refreshModelList()" style="padding:6px 10px;font-size:12px;" title="Refresh model list">🔄</button>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="chat-messages">
+                    <div class="chat-message assistant">
+                        <div class="model-tag" id="chat-model-tag">🤖 DeepSeek R1 — Health Assistant</div>
+                        Hello! I'm your Health AI assistant powered by <strong>DeepSeek R1</strong> running <strong>locally</strong> on your device. I can answer questions about your medical records. Try asking:
+                        <ul style="margin-top:8px;padding-left:20px;">
+                            <li>"What prescriptions do I have?"</li>
+                            <li>"List my active medications"</li>
+                            <li>"Show my medical timeline"</li>
+                            <li>"What should I know about my medications?"</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="chat-input-area">
+                    <textarea id="chat-input" rows="1" placeholder="Ask about your health records..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea>
+                    <button class="btn-send" id="btn-send" onclick="sendChat()">➤</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARE ROUTER VIEW -->
+        <div class="view" id="view-care-router">
+            <div class="page-header">
+                <h2>🩺 Care Router</h2>
+                <p>Privacy-preserving specialist routing — PII stripped on-device before analysis</p>
+            </div>
+
+            <div class="privacy-bridge" style="margin-bottom:24px;">
+                <div class="card-header">
+                    <div class="card-title">🔒 Privacy Bridge — Live Demo</div>
+                </div>
+                <div class="bridge-flow" id="bridge-flow-live">
+                    <div class="bridge-node" id="bridge-step-1">
+                        <div class="node-icon">📋</div>
+                        <div class="node-label">Patient Data</div>
+                        <div class="node-desc">With PII</div>
+                    </div>
+                    <div class="bridge-arrow">→</div>
+                    <div class="bridge-node" id="bridge-step-2">
+                        <div class="node-icon">🔒</div>
+                        <div class="node-label">PII Strip</div>
+                        <div class="node-desc">Local AI</div>
+                    </div>
+                    <div class="bridge-arrow">→</div>
+                    <div class="bridge-node" id="bridge-step-3">
+                        <div class="node-icon">🔍</div>
+                        <div class="node-label">Specialty Match</div>
+                        <div class="node-desc">AI routing</div>
+                    </div>
+                    <div class="bridge-arrow">→</div>
+                    <div class="bridge-node" id="bridge-step-4">
+                        <div class="node-icon">🏥</div>
+                        <div class="node-label">Provider Search</div>
+                        <div class="node-desc">MongoDB Atlas</div>
+                    </div>
+                    <div class="bridge-arrow">→</div>
+                    <div class="bridge-node" id="bridge-step-5">
+                        <div class="node-icon">✅</div>
+                        <div class="node-label">Action Plan</div>
+                        <div class="node-desc">No PII leaked</div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px;">
+                <div class="card">
+                    <div class="card-title" style="margin-bottom:12px;">Patient Data (with PII)</div>
+                    <textarea id="care-input" class="form-textarea" rows="5" placeholder="Enter patient data with PII for anonymization demo...&#10;&#10;Example: John Smith, DOB 03/15/1995, takes escitalopram 10mg for anxiety. Recent lab shows A1C of 6.8%. Lives in San Francisco. SSN 123-45-6789.">John Smith, DOB 03/15/1995, takes escitalopram 10mg for anxiety. Recent lab shows A1C of 6.8%. Lives in San Francisco. SSN 123-45-6789. Phone: 415-555-0123.</textarea>
+                </div>
+                <div class="card">
+                    <div class="card-title" style="margin-bottom:12px;">Anonymized Clinical Intent</div>
+                    <div id="anonymized-output" class="markdown-content" style="min-height:100px;padding:12px;background:var(--bg-input);border-radius:10px;font-size:14px;color:var(--text-secondary);">
+                        Click "Route to Specialist" to see PII stripping in action...
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-bottom:24px;">
+                <button class="btn btn-primary" onclick="routePatient()" id="btn-route">🩺 Route to Specialist</button>
+                <button class="btn btn-secondary" onclick="checkDrugs()">💊 Check Drug Interactions</button>
+            </div>
+
+            <div id="care-results" class="hidden">
+                <h3 style="font-size:18px;font-weight:700;margin-bottom:16px;">📋 Routing Results</h3>
+                <div id="care-specialty" style="margin-bottom:16px;"></div>
+                <div id="care-providers" class="records-grid" style="margin-bottom:16px;"></div>
+                <div id="care-drugs"></div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<script src="/assets/js/app.js"></script>
+</body>
+</html>
